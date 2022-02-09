@@ -17,18 +17,20 @@
         image: <an image from the show data, or a default imege if no image exists, (image isn't needed until later)>
       }
  */
-async function searchShows(query) {
-  // TODO: Make an ajax request to the searchShows api.  Remove
-  // hard coded data.
-
-  return [
+async function searchShows(query) 
+{
+  const res = await axios.get(`http://api.tvmaze.com/search/shows?q=${query}`);
+  const shows = res.data.map(result => 
     {
-      id: 1767,
-      name: "The Bletchley Circle",
-      summary: "<p><b>The Bletchley Circle</b> follows the journey of four ordinary women with extraordinary skills that helped to end World War II.</p><p>Set in 1952, Susan, Millie, Lucy and Jean have returned to their normal lives, modestly setting aside the part they played in producing crucial intelligence, which helped the Allies to victory and shortened the war. When Susan discovers a hidden code behind an unsolved murder she is met by skepticism from the police. She quickly realises she can only begin to crack the murders and bring the culprit to justice with her former friends.</p>",
-      image: "http://static.tvmaze.com/uploads/images/medium_portrait/147/369403.jpg"
-    }
-  ]
+      const show = result.show;
+      return {
+        id: show.id,
+        name: show.name,
+        summary: show.summary,
+        image: show.image ? show.image.medium : "http://tinyurl.com/missing-tv",
+      };
+    });
+    return shows;
 }
 
 
@@ -48,6 +50,8 @@ function populateShows(shows) {
            <div class="card-body">
              <h5 class="card-title">${show.name}</h5>
              <p class="card-text">${show.summary}</p>
+             <img class="card-img-top" src=${show.image}>
+             <button class="btn btn-primary get-episodes">Episodes</button>
            </div>
          </div>
        </div>
@@ -81,10 +85,35 @@ $("#search-form").on("submit", async function handleSearch (evt) {
  *      { id, name, season, number }
  */
 
-async function getEpisodes(id) {
-  // TODO: get episodes from tvmaze
-  //       you can get this by making GET request to
-  //       http://api.tvmaze.com/shows/SHOW-ID-HERE/episodes
-
-  // TODO: return array-of-episode-info, as described in docstring above
+async function getEpisodes(id) 
+{
+  const res = await axios.get(`http://api.tvmaze.com/shows/${id}/episodes`);
+  const episodes = res.data.map(episode =>
+    ({
+      id: episode.id,
+      name: episode.name,
+      season: episode.season,
+      number: episode.number
+    }));
+  return episodes;
 }
+
+function populateEpisodes(episodes)
+{
+  const $episodeList = $("#episodes-list");
+  $episodeList.empty();
+  for (let episode of episodes)
+  {
+    const $content = $(`<li>${episode.name} [Season: ${episode.season}, Episode: ${episode.number}]</li>`);
+    $episodeList.append($content);
+  }
+  $("#episodes-area").show();
+}
+
+$("#shows-list").on("click", ".get-episodes", async function(evt)
+{
+  const showID = $(evt.target).closest(".Show").data("show-id");
+  const episodes = await getEpisodes(showID);
+  populateEpisodes(episodes);
+  console.log(episodes);
+});
